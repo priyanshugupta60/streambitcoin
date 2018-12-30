@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stream Bitcoin</title>
+  <link href="https://getbootstrap.com/docs/3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+    <br>
+    <h3>Bitcoin Latest Transactions:</h3>
+    <div class="jumbotron" id="transaction" style="height:250px;overflow: scroll;overflow-x: hidden;"></div>
+    <h3>Bitcoin Latest Blocks:</h3>
+    <div class="jumbotron" id="block" style="height:250px;overflow: scroll;overflow-x: hidden;"></div>
+</div>
+<script>
+var btcs = new WebSocket('wss://ws.blockchain.info/inv');
+var btcs1 = new WebSocket('wss://ws.blockchain.info/inv');
+
+btcs.onopen = function(){
+	btcs.send(JSON.stringify({"op":"unconfirmed_sub"}));
+};
+
+btcs1.onopen = function(){
+	btcs1.send(JSON.stringify({"op":"blocks_sub"}));
+};
+
+btcs1.onmessage = function(onmsg1){
+	var response1 = JSON.parse(onmsg1.data);
+	console.log(response1);
+	var block = "<div class='alert alert-success'><h5>Details</h5><div class='row'>";
+	block += "<div class='col-xs-12 col-md-6'><ul>";
+	block += "<li>Block Height: <strong>" + response1.x.height + "</strong></li>";
+	block += "<li>Estimated BTC Sent: <strong>" + response1.x.estimatedBTCSent/100000000 + "</strong></li>";
+	block += "<li>Founded By: <strong>" + response1.x.foundBy.description + "</strong></li>";
+	block += "</ul></div>";
+	block += "<div class='col-xs-12 col-md-6'><ul>";
+	block += "<li>Block Size: <strong>" + response1.x.size + "</strong></li>";
+	block += "<li>Total BTC Sent: <strong>" + response1.x.totalBTCSent/100000000 + "</strong></li>";
+	block += "<li>Total Transactions: <strong>" + response1.x.txIndexes.length + "</strong></li>";
+	block += "</ul></div></div>";
+	block += "<div class='row'><div class='col-xs-12'>Date: <strong>" + new Date() + "</strong></div></div>";
+	block += "</div>";
+	$("#block").prepend(block);
+}
+
+btcs.onmessage = function(onmsg){
+	var response = JSON.parse(onmsg.data);
+	var transactionCharges = 0;
+	var transaction = "<div class='alert alert-success'><div class='row'>";
+	transaction += "<div class='col-xs-12 col-md-6'><h5>Inputs</h5><ul>";
+	for (i = 0; i < response.x.inputs.length; i++) {
+		transaction += "<li><strong>" + response.x.inputs[i].prev_out.value/100000000 + " BTC</strong> is transferred from <strong>" + response.x.inputs[i].prev_out.addr + "</strong> address.</li>";
+		transactionCharges += response.x.inputs[i].prev_out.value;
+	}
+	transaction += "</ul></div>";
+
+	transaction += "<div class='col-xs-12 col-md-6'><h5>Outputs</h5><ul>";
+	for (i = 0; i < response.x.out.length; i++) {
+		if (response.x.out[i].addr != null){
+		transaction += "<li><strong>" + response.x.out[i].value/100000000 + " BTC</strong> is sent to <strong>" + response.x.out[i].addr + "</strong> address.</li>";
+		transactionCharges -= response.x.out[i].value;
+		}
+	}
+	transaction += "</ul></div></div>";
+	transaction += "<div class='row'><div class='col-xs-12 col-md-6'>Transaction Charges = <strong>" + transactionCharges/100000000 + " BTC</strong></div><div class='col-xs-12 col-md-6'>Date: <strong>" + new Date() + "</strong></div></div>";
+$("#transaction").prepend(transaction);
+}
+</script>
+</body>
+</html>
